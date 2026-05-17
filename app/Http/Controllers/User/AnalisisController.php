@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\AnalisisSpj;
+use App\Models\Analisis;
 use App\Services\ChatService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -19,7 +19,7 @@ class AnalisisController extends Controller
     {
         $search = $request->get('search', '');
 
-        $analisis = AnalisisSpj::when($search, function ($query) use ($search) {
+        $analisis = Analisis::when($search, function ($query) use ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('judul', 'like', "%{$search}%")
                     ->orWhere('hasil_ocr', 'like', "%{$search}%");
@@ -36,7 +36,7 @@ class AnalisisController extends Controller
     /**
      * Display the specified analisis for AI analysis.
      */
-    public function show(AnalisisSpj $analisi)
+    public function show(Analisis $analisi)
     {
         // Ensure user can only view their own data
         if ($analisi->user_id !== auth()->user()->id) {
@@ -73,7 +73,7 @@ class AnalisisController extends Controller
             $filePath = $file->storeAs('analisis-spj', $fileName, 'public');
         }
 
-        AnalisisSpj::create([
+        Analisis::create([
             'user_id' => auth()->user()->id,
             'judul' => $validated['judul'],
             'file_spj' => $filePath,
@@ -88,7 +88,7 @@ class AnalisisController extends Controller
     /**
      * Show the form for editing the specified analisis SPJ.
      */
-    public function edit(AnalisisSpj $analisi)
+    public function edit(Analisis $analisi)
     {
         // Ensure user can only edit their own data
         if ($analisi->user_id !== auth()->user()->id) {
@@ -103,7 +103,7 @@ class AnalisisController extends Controller
     /**
      * Update the specified analisis SPJ.
      */
-    public function update(Request $request, AnalisisSpj $analisi)
+    public function update(Request $request, Analisis $analisi)
     {
         // Ensure user can only update their own data
         if ($analisi->user_id !== auth()->user()->id) {
@@ -140,7 +140,7 @@ class AnalisisController extends Controller
     /**
      * Remove the specified analisis SPJ.
      */
-    public function destroy(AnalisisSpj $analisi)
+    public function destroy(Analisis $analisi)
     {
         // Ensure user can only delete their own data
         if ($analisi->user_id !== auth()->user()->id) {
@@ -164,7 +164,7 @@ class AnalisisController extends Controller
     /**
      * Perform OCR on the uploaded file.
      */
-    public function performOcr(AnalisisSpj $analisi)
+    public function performOcr(Analisis $analisi)
     {
         // Ensure user can only access their own data
         if ($analisi->user_id !== auth()->user()->id) {
@@ -290,7 +290,7 @@ class AnalisisController extends Controller
     /**
      * Perform AI analysis on the OCR result.
      */
-    public function performAnalisis(Request $request, AnalisisSpj $analisi)
+    public function performAnalisis(Request $request, Analisis $analisi)
     {
         // Ensure user can only access their own data
         if ($analisi->user_id !== auth()->user()->id) {
