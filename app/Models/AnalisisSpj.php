@@ -10,7 +10,7 @@ class AnalisisSpj extends Model
 {
     use HasFactory;
 
-    protected $table = 'analisis_spj';
+    protected $table = 'analisis';
 
     protected $fillable = ['user_id', 'judul', 'file_spj', 'hasil_ocr', 'status_ocr', 'hasil_analisis', 'status_analisis'];
     

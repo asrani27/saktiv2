@@ -4,7 +4,6 @@
 @section('page_title', 'Analisis Data SPJ')
 
 @section('content')
-    @include('user.analisis.components.analisis-modal')
 <div class="mx-auto">
     {{-- Header --}}
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -167,15 +166,13 @@
                                 </form>
                                 @endif
                                 @if ($item->hasil_ocr)
-                                <button type="button"
-                                    onclick="openAnalisisModal({{ $item->id }}, @js($item->hasil_ocr))"
-                                    class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors {{ $item->status_analisis === 'processing' ? 'cursor-wait opacity-50' : '' }}"
-                                    title="Analisis AI"
-                                    {{ $item->status_analisis === 'processing' ? 'disabled' : '' }}>
+                                <a href="{{ route('user.analisis.show', $item->id) }}"
+                                    class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                    title="Analisis AI">
                                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                                     </svg>
-                                </button>
+                                </a>
                                 @endif
                                 <a href="{{ route('user.analisis.edit', $item->id) }}"
                                     class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -278,15 +275,13 @@
                     </form>
                     @endif
                     @if ($item->hasil_ocr)
-                    <button type="button"
-                        onclick="openAnalisisModal({{ $item->id }}, @js($item->hasil_ocr))"
-                        class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 {{ $item->status_analisis === 'processing' ? 'bg-indigo-50 text-indigo-600 cursor-wait' : 'bg-purple-50 hover:bg-purple-100 text-purple-600' }} rounded-xl font-medium transition-all duration-150"
-                        {{ $item->status_analisis === 'processing' ? 'disabled' : '' }}>
+                    <a href="{{ route('user.analisis.show', $item->id) }}"
+                        class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded-xl font-medium transition-all duration-150">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                         </svg>
-                        <span>{{ $item->status_analisis === 'processing' ? 'Processing...' : 'Analisis' }}</span>
-                    </button>
+                        <span>Analisis</span>
+                    </a>
                     @endif
                     <a href="{{ route('user.analisis.edit', $item->id) }}"
                         class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl font-medium transition-all duration-150">

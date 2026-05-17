@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('analisis_spj', function (Blueprint $table) {
+        Schema::table('analisis', function (Blueprint $table) {
             $table->text('hasil_analisis')->nullable()->after('hasil_ocr');
             $table->enum('status_analisis', ['pending', 'processing', 'completed', 'failed'])->default('pending')->after('status_ocr');
         });
@@ -22,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('analisis_spj', function (Blueprint $table) {
+        Schema::table('analisis', function (Blueprint $table) {
             $table->dropColumn(['hasil_analisis', 'status_analisis']);
         });
     }
