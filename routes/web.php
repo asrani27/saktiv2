@@ -44,10 +44,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [AnalisisController::class, 'index'])->name('index');
         Route::get('/create', [AnalisisController::class, 'create'])->name('create');
         Route::post('/', [AnalisisController::class, 'store'])->name('store');
+        Route::get('/{analisi}', [AnalisisController::class, 'show'])->name('show');
         Route::get('/{analisi}/edit', [AnalisisController::class, 'edit'])->name('edit');
         Route::put('/{analisi}', [AnalisisController::class, 'update'])->name('update');
         Route::delete('/{analisi}', [AnalisisController::class, 'destroy'])->name('destroy');
         Route::post('/{analisi}/ocr', [AnalisisController::class, 'performOcr'])->name('ocr');
+        Route::post('/{analisi}/analisis', [AnalisisController::class, 'performAnalisis'])->name('analisis');
     });
 
     // Admin Routes

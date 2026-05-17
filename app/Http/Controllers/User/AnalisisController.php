@@ -4,7 +4,10 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnalisisSpj;
+use App\Services\ChatService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class AnalisisController extends Controller
@@ -19,15 +22,30 @@ class AnalisisController extends Controller
         $analisis = AnalisisSpj::when($search, function ($query) use ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('judul', 'like', "%{$search}%")
-                  ->orWhere('hasil_ocr', 'like', "%{$search}%");
+                    ->orWhere('hasil_ocr', 'like', "%{$search}%");
             });
         })
-        ->where('user_id', auth()->user()->id)
-        ->orderBy('created_at', 'desc')
-        ->paginate(10)
-        ->withQueryString();
+            ->where('user_id', auth()->user()->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString();
 
         return view('user.analisis.index', compact('analisis', 'search'));
+    }
+
+    /**
+     * Display the specified analisis for AI analysis.
+     */
+    public function show(AnalisisSpj $analisi)
+    {
+        // Ensure user can only view their own data
+        if ($analisi->user_id !== auth()->user()->id) {
+            return redirect()
+                ->route('user.analisis.index')
+                ->with('error', 'Anda tidak memiliki akses ke data ini!');
+        }
+
+        return view('user.analisis.show', compact('analisi'));
     }
 
     /**
@@ -106,7 +124,7 @@ class AnalisisController extends Controller
             if ($analisi->file_spj) {
                 Storage::disk('public')->delete($analisi->file_spj);
             }
-            
+
             $file = $request->file('file_spj');
             $fileName = time() . '_' . $file->getClientOriginalName();
             $analisi->file_spj = $file->storeAs('analisis-spj', $fileName, 'public');
@@ -169,7 +187,7 @@ class AnalisisController extends Controller
         try {
             // Get the full path to the file
             $filePath = Storage::disk('public')->path($analisi->file_spj);
-            
+
             // Check if file exists
             if (!file_exists($filePath)) {
                 throw new \Exception('File tidak ditemukan!');
@@ -189,7 +207,6 @@ class AnalisisController extends Controller
             return redirect()
                 ->route('user.analisis.index')
                 ->with('success', 'OCR berhasil dilakukan!');
-
         } catch (\Exception $e) {
             // Update status to failed
             $analisi->status_ocr = 'failed';
@@ -227,18 +244,18 @@ class AnalisisController extends Controller
         // Try to use pdftotext if available (poppler-utils)
         $output = [];
         $returnCode = 0;
-        
+
         exec("pdftotext \"$filePath\" - 2>/dev/null", $output, $returnCode);
-        
+
         if ($returnCode === 0 && !empty($output)) {
             return implode("\n", $output);
         }
 
         // Fallback: Return a simulated response for demo purposes
-        return "Hasil OCR dari PDF:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" . 
-               "Catatan: Untuk hasil yang lebih akurat, pastikan pdftotext (poppler-utils) terinstal di server.\n\n" .
-               "Nama file: " . basename($filePath) . "\n" .
-               "Ukuran: " . filesize($filePath) . " bytes";
+        return "Hasil OCR dari PDF:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" .
+            "Catatan: Untuk hasil yang lebih akurat, pastikan pdftotext (poppler-utils) terinstal di server.\n\n" .
+            "Nama file: " . basename($filePath) . "\n" .
+            "Ukuran: " . filesize($filePath) . " bytes";
     }
 
     /**
@@ -249,24 +266,135 @@ class AnalisisController extends Controller
         // Try to use tesseract if available
         $output = [];
         $returnCode = 0;
-        
+
         exec("tesseract \"$filePath\" stdout -l ind 2>/dev/null", $output, $returnCode);
-        
+
         if ($returnCode === 0 && !empty($output)) {
             return implode("\n", $output);
         }
 
         // Try with English as fallback
         exec("tesseract \"$filePath\" stdout 2>/dev/null", $output, $returnCode);
-        
+
         if ($returnCode === 0 && !empty($output)) {
             return implode("\n", $output);
         }
 
         // Fallback: Return a simulated response for demo purposes
-        return "Hasil OCR dari gambar:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" . 
-               "Catatan: Untuk hasil yang lebih akurat, pastikan Tesseract OCR terinstal di server.\n\n" .
-               "Nama file: " . basename($filePath) . "\n" .
-               "Ukuran: " . filesize($filePath) . " bytes";
+        return "Hasil OCR dari gambar:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" .
+            "Catatan: Untuk hasil yang lebih akurat, pastikan Tesseract OCR terinstal di server.\n\n" .
+            "Nama file: " . basename($filePath) . "\n" .
+            "Ukuran: " . filesize($filePath) . " bytes";
+    }
+
+    /**
+     * Perform AI analysis on the OCR result.
+     */
+    public function performAnalisis(Request $request, AnalisisSpj $analisi)
+    {
+        // Ensure user can only access their own data
+        if ($analisi->user_id !== auth()->user()->id) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'error' => 'Anda tidak memiliki akses ke data ini!'], 403);
+            }
+            return redirect()
+                ->route('user.analisis.index')
+                ->with('error', 'Anda tidak memiliki akses ke data ini!');
+        }
+
+        // Check if OCR result exists
+        if (!$analisi->hasil_ocr) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'error' => 'Hasil OCR belum tersedia! Silakan lakukan OCR terlebih dahulu.'], 400);
+            }
+            return redirect()
+                ->route('user.analisis.index')
+                ->with('error', 'Hasil OCR belum tersedia! Silakan lakukan OCR terlebih dahulu.');
+        }
+
+        // Validate prompt
+        $validated = $request->validate([
+            'prompt' => ['required', 'string', 'max:2000'],
+        ]);
+
+        // Update status to processing
+        $analisi->status_analisis = 'processing';
+        $analisi->save();
+
+        try {
+            $analisisResult = $this->callAIForAnalisis($analisi->hasil_ocr, $validated['prompt']);
+
+            // Update the record with AI analysis result
+            $analisi->hasil_analisis = $analisisResult;
+            $analisi->status_analisis = 'completed';
+            $analisi->save();
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Analisis berhasil dilakukan!',
+                    'hasil_analisis' => $analisisResult
+                ]);
+            }
+
+            return redirect()
+                ->route('user.analisis.show', $analisi->id)
+                ->with('success', 'Analisis berhasil dilakukan!');
+        } catch (\Exception $e) {
+            Log::error('AI Analysis Error: ' . $e->getMessage());
+
+            // Update status to failed
+            $analisi->status_analisis = 'failed';
+            $analisi->save();
+
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'error' => 'Analisis gagal: ' . $e->getMessage()], 500);
+            }
+
+            return redirect()
+                ->route('user.analisis.index')
+                ->with('error', 'Analisis gagal: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Call AI API for analysis.
+     */
+    private function callAIForAnalisis(string $ocrText, string $prompt): string
+    {
+        $apiKey = env('OPENAI_API_KEY', '');
+        $model = env('OPENAI_MODEL', 'gpt-5.1');
+
+        if (empty($apiKey)) {
+            throw new \Exception('API key tidak dikonfigurasi. Silakan atur OPENAI_API_KEY di file .env');
+        }
+
+        $systemPrompt = "Kamu adalah asisten AI yang khusus menganalisis dokumen SPJ (Surat Pertanggungjawaban). " .
+            "Kamu harus membantu pengguna memahami, memvalidasi, dan memberikan insight dari dokumen SPJ. " .
+            "Gunakan Bahasa Indonesia untuk respons. JANGAN gunakan format Markdown seperti **bold**, *italic*, atau markdown formatting lainnya. Langsung tulis teks biasa saja.";
+
+        $userPrompt = "Berikut adalah hasil OCR dari dokumen SPJ:\n\n{$ocrText}\n\n\nPertanyaan/Prompt dari pengguna:\n{$prompt}";
+
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user', 'content' => $userPrompt],
+        ];
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $apiKey,
+            'Content-Type' => 'application/json',
+        ])->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
+            'model' => $model,
+            'messages' => $messages,
+            'temperature' => 0.7,
+            'max_completion_tokens' => 4000,
+        ]);
+
+        if (!$response->successful()) {
+            $error = $response->json();
+            throw new \Exception($error['error']['message'] ?? 'API request failed');
+        }
+
+        return $response->json()['choices'][0]['message']['content'] ?? 'Maaf, saya tidak dapat menjawab saat ini.';
     }
 }
