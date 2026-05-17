@@ -84,8 +84,7 @@
 
                 <!-- Slogan -->
                 <p class="text-blue-100 text-lg lg:text-xl max-w-md">
-                    Sistem Integrasi Sinkronisasi Audit Ketataan Instansi - Solusi terpercaya untuk manajemen audit
-                    yang efisien dan akuntabel.
+                    Sistem Integrasi Sinkronisasi Audit Ketataan Instansi
                 </p>
 
                 <!-- Decorative Elements -->
