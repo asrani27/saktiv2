@@ -74,20 +74,18 @@
             <div
                 class="lg:w-1/2 bg-gradient-to-br from-blue-600 to-blue-700 p-8 lg:p-12 flex flex-col justify-center items-center text-center">
                 <!-- App Icon -->
-                <div class="w-24 h-24 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-8">
-                    <svg class="w-14 h-14 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                    </svg>
+                <div
+                    class="w-24 h-24 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-8 overflow-hidden">
+                    <img src="{{ asset('logo/sakti.png') }}" alt="SISAKTI Logo" class="w-20 h-20 object-contain" />
                 </div>
 
                 <!-- App Title -->
-                <h1 class="text-3xl lg:text-4xl font-bold text-white mb-4">Saktiv</h1>
+                <h1 class="text-3xl lg:text-4xl font-bold text-white mb-4">SISAKTI</h1>
 
                 <!-- Slogan -->
                 <p class="text-blue-100 text-lg lg:text-xl max-w-md">
-                    Sistem Informasi Aktivitas dan Kepenanagan
+                    Sistem Integrasi Sinkronisasi Audit Ketataan Instansi - Solusi terpercaya untuk manajemen audit
+                    yang efisien dan akuntabel.
                 </p>
 
                 <!-- Decorative Elements -->
