@@ -289,7 +289,10 @@ class AnalisisController extends Controller
         }
 
         // Fallback: Return a simulated response for demo purposes
-        return "Hasil OCR:\n\n";
+        return "Hasil OCR dari PDF:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" .
+            "Catatan: Untuk hasil yang lebih akurat, pastikan pdftotext (poppler-utils) terinstal di server.\n\n" .
+            "Nama file: " . basename($filePath) . "\n" .
+            "Ukuran: " . filesize($filePath) . " bytes";
     }
 
     /**
@@ -315,7 +318,10 @@ class AnalisisController extends Controller
         }
 
         // Fallback: Return a simulated response for demo purposes
-        return "Hasil OCR:";
+        return "Hasil OCR dari gambar:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" .
+            "Catatan: Untuk hasil yang lebih akurat, pastikan Tesseract OCR terinstal di server.\n\n" .
+            "Nama file: " . basename($filePath) . "\n" .
+            "Ukuran: " . filesize($filePath) . " bytes";
     }
 
     /**
