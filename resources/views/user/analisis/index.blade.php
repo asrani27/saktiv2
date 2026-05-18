@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
-@section('title', 'Analisis Data - Saktiv')
-@section('page_title', 'Analisis Data SPJ')
+@section('title', 'Analisis Data')
+@section('page_title', 'Analisis Data')
 
 @section('content')
 <div class="mx-auto">
