@@ -218,6 +218,13 @@ class AnalisisController extends Controller
      */
     public function performOcr(AnalisisFile $file)
     {
+        // Ensure file record has valid data
+        if (empty($file->file_url)) {
+            return redirect()
+                ->back()
+                ->with('error', 'Record file tidak valid atau tidak ditemukan di database. Silakan upload ulang file.');
+        }
+
         // Ensure user can only access their own data
         if ($file->analisis->user_id !== auth()->user()->id) {
             return redirect()
@@ -229,9 +236,11 @@ class AnalisisController extends Controller
             // Get the full path to the file
             $filePath = Storage::disk('public')->path($file->file_url);
 
-            // Check if file exists
+            // Check if file exists on disk
             if (!file_exists($filePath)) {
-                throw new \Exception('File tidak ditemukan!');
+                return redirect()
+                    ->back()
+                    ->with('error', 'File tidak ditemukan di server. File mungkin telah dihapus atau dipindahkan. Silakan upload ulang file.');
             }
 
             // Get file extension
@@ -278,21 +287,41 @@ class AnalisisController extends Controller
      */
     private function extractTextFromPdf(string $filePath): string
     {
+        // Check if pdftotext is installed
+        $pdftotextExists = false;
+        exec("which pdftotext 2>/dev/null", $pdftotextCheck, $whichReturn);
+        if ($whichReturn === 0 && !empty($pdftotextCheck)) {
+            $pdftotextExists = true;
+        }
+
+        if (!$pdftotextExists) {
+            Log::warning('pdftotext is not installed on the server. PDF text extraction will not work.');
+            throw new \Exception('pdftotext (poppler-utils) belum terinstal di server. Silakan instal dengan perintah: sudo apt-get install poppler-utils');
+        }
+
         // Try to use pdftotext if available (poppler-utils)
         $output = [];
         $returnCode = 0;
 
-        exec("pdftotext \"$filePath\" - 2>/dev/null", $output, $returnCode);
+        exec("pdftotext \"" . escapeshellarg($filePath) . "\" - 2>&1", $output, $returnCode);
+
+        Log::info('pdftotext execution', [
+            'file' => $filePath,
+            'returnCode' => $returnCode,
+            'outputLines' => count($output),
+            'output' => $output
+        ]);
 
         if ($returnCode === 0 && !empty($output)) {
-            return implode("\n", $output);
+            $text = implode("\n", $output);
+            if (trim($text) === '') {
+                // PDF exists but has no extractable text (probably scanned/image-based)
+                throw new \Exception('PDF tidak memiliki teks yang bisa diekstrak. Kemungkinan dokumen ini adalah scanned image. Gunakan format JPG/PNG untuk OCR gambar.');
+            }
+            return $text;
         }
 
-        // Fallback: Return a simulated response for demo purposes
-        return "Hasil OCR dari PDF:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" .
-            "Catatan: Untuk hasil yang lebih akurat, pastikan pdftotext (poppler-utils) terinstal di server.\n\n" .
-            "Nama file: " . basename($filePath) . "\n" .
-            "Ukuran: " . filesize($filePath) . " bytes";
+        throw new \Exception('Gagal mengekstrak teks dari PDF. returnCode: ' . $returnCode . ', output: ' . implode("\n", $output));
     }
 
     /**
@@ -300,28 +329,48 @@ class AnalisisController extends Controller
      */
     private function extractTextFromImage(string $filePath): string
     {
-        // Try to use tesseract if available
+        // Check if tesseract is installed
+        $tesseractExists = false;
+        exec("which tesseract 2>/dev/null", $tesseractCheck, $whichReturn);
+        if ($whichReturn === 0 && !empty($tesseractCheck)) {
+            $tesseractExists = true;
+        }
+
+        if (!$tesseractExists) {
+            Log::warning('Tesseract OCR is not installed on the server.');
+            throw new \Exception('Tesseract OCR belum terinstal di server. Silakan instal dengan perintah: sudo apt-get install tesseract-ocr tesseract-ocr-ind');
+        }
+
+        // Try Indonesian language first
         $output = [];
         $returnCode = 0;
 
-        exec("tesseract \"$filePath\" stdout -l ind 2>/dev/null", $output, $returnCode);
+        exec("tesseract " . escapeshellarg($filePath) . " stdout -l ind 2>&1", $output, $returnCode);
+
+        Log::info('Tesseract execution (Indonesian)', [
+            'file' => $filePath,
+            'returnCode' => $returnCode,
+            'outputLines' => count($output)
+        ]);
 
         if ($returnCode === 0 && !empty($output)) {
-            return implode("\n", $output);
+            $text = implode("\n", $output);
+            if (trim($text) !== '') {
+                return $text;
+            }
         }
 
         // Try with English as fallback
-        exec("tesseract \"$filePath\" stdout 2>/dev/null", $output, $returnCode);
+        exec("tesseract " . escapeshellarg($filePath) . " stdout 2>&1", $output, $returnCode);
 
         if ($returnCode === 0 && !empty($output)) {
-            return implode("\n", $output);
+            $text = implode("\n", $output);
+            if (trim($text) !== '') {
+                return $text;
+            }
         }
 
-        // Fallback: Return a simulated response for demo purposes
-        return "Hasil OCR dari gambar:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" .
-            "Catatan: Untuk hasil yang lebih akurat, pastikan Tesseract OCR terinstal di server.\n\n" .
-            "Nama file: " . basename($filePath) . "\n" .
-            "Ukuran: " . filesize($filePath) . " bytes";
+        throw new \Exception('Gagal mengekstrak teks dari gambar. returnCode: ' . $returnCode . ', output: ' . implode("\n", $output));
     }
 
     /**
