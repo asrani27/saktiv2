@@ -289,10 +289,7 @@ class AnalisisController extends Controller
         }
 
         // Fallback: Return a simulated response for demo purposes
-        return "Hasil OCR dari PDF:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" .
-            "Catatan: Untuk hasil yang lebih akurat, pastikan pdftotext (poppler-utils) terinstal di server.\n\n" .
-            "Nama file: " . basename($filePath) . "\n" .
-            "Ukuran: " . filesize($filePath) . " bytes";
+        return "Hasil OCR:\n\n";
     }
 
     /**
@@ -318,10 +315,7 @@ class AnalisisController extends Controller
         }
 
         // Fallback: Return a simulated response for demo purposes
-        return "Hasil OCR dari gambar:\n\nDokumen ini telah berhasil diekstrak menggunakan OCR.\n\n" .
-            "Catatan: Untuk hasil yang lebih akurat, pastikan Tesseract OCR terinstal di server.\n\n" .
-            "Nama file: " . basename($filePath) . "\n" .
-            "Ukuran: " . filesize($filePath) . " bytes";
+        return "Hasil OCR:";
     }
 
     /**
@@ -365,9 +359,9 @@ class AnalisisController extends Controller
                 ->whereNotNull('hasil_ocr')
                 ->pluck('hasil_ocr')
                 ->toArray();
-            
+
             $combinedOcr = implode("\n\n--- File Berikutnya ---\n\n", $ocrTexts);
-            
+
             $analisisResult = $this->callAIForAnalisis($combinedOcr, $validated['prompt']);
 
             // Update the record with AI analysis result
