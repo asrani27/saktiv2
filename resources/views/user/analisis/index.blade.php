@@ -51,7 +51,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <input type="text" name="search" value="{{ $search }}" placeholder="Cari judul atau hasil OCR..."
+                <input type="text" name="search" value="{{ $search }}" placeholder="Cari judul..."
                     class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
             </div>
             <button type="submit"
@@ -77,9 +77,9 @@
                         <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
                             Judul</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                            File SPJ</th>
+                            Files</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                            Hasil OCR</th>
+                            File Count</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
                             Status</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
@@ -95,85 +95,49 @@
                             <span class="font-medium text-gray-800">{{ $item->judul }}</span>
                         </td>
                         <td class="px-6 py-4">
-                            @if ($item->file_spj)
-                            <a href="{{ Storage::url($item->file_spj) }}" target="_blank"
-                                class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <span class="text-sm">Lihat File</span>
-                            </a>
+                            @if ($item->files->count() > 0)
+                            <div class="flex flex-wrap gap-1">
+                                @foreach ($item->files->take(3) as $file)
+                                <a href="{{ Storage::url($file->file_url) }}" target="_blank"
+                                    class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    {{ Str::limit($file->nama_file, 15) }}
+                                </a>
+                                @endforeach
+                                @if ($item->files->count() > 3)
+                                <span class="text-xs text-gray-500">+{{ $item->files->count() - 3 }} more</span>
+                                @endif
+                            </div>
                             @else
                             <span class="text-gray-400 text-sm">Tidak ada file</span>
                             @endif
                         </td>
                         <td class="px-6 py-4">
-                            @if ($item->hasil_ocr)
-                            <span class="text-gray-600 text-sm line-clamp-2">{{ Str::limit($item->hasil_ocr, 50) }}</span>
-                            @else
-                            <span class="text-gray-400 text-sm">Belum ada hasil</span>
-                            @endif
+                            <span class="text-gray-600">{{ $item->files->count() }} file(s)</span>
                         </td>
                         <td class="px-6 py-4">
                             <span
                                 class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $item->status_badge['bg'] }} {{ $item->status_badge['text'] }}">
-                                @if ($item->status_ocr === 'pending')
-                                <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                @elseif ($item->status_ocr === 'processing')
-                                <svg class="w-3 h-3 mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                @elseif ($item->status_ocr === 'completed')
-                                <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                @elseif ($item->status_ocr === 'failed')
-                                <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                @endif
                                 {{ $item->status_badge['label'] }}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-gray-500 text-sm">{{ $item->created_at->format('d M Y') }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center justify-end gap-2">
-                                @if ($item->file_spj)
-                                <form action="{{ route('user.analisis.ocr', $item->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit"
-                                        class="p-2 {{ $item->status_ocr === 'processing' ? 'text-yellow-600 bg-yellow-50 cursor-wait' : 'text-green-600 hover:bg-green-50' }} rounded-lg transition-colors"
-                                        title="OCR"
-                                        {{ $item->status_ocr === 'processing' ? 'disabled' : '' }}>
-                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                            stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611l-3.5 1.4c-.32.128-.686.076-.927-.059l-1.89-1.315" />
-                                        </svg>
-                                    </button>
-                                </form>
-                                @endif
-                                @if ($item->hasil_ocr)
                                 <a href="{{ route('user.analisis.show', $item->id) }}"
                                     class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                    title="Analisis AI">
-                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                    title="Detail">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
                                 </a>
-                                @endif
                                 <a href="{{ route('user.analisis.edit', $item->id) }}"
                                     class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                     title="Edit">
@@ -241,48 +205,23 @@
                 </div>
 
                 <div class="mt-3 space-y-2">
-                    @if ($item->file_spj)
-                    <div class="flex items-center gap-2 text-sm">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                            stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <a href="{{ Storage::url($item->file_spj) }}" target="_blank"
-                            class="text-blue-600 hover:text-blue-800">Lihat File</a>
-                    </div>
-                    @endif
-                    @if ($item->hasil_ocr)
+                    @if ($item->files->count() > 0)
                     <div class="text-sm text-gray-600">
-                        <span class="text-gray-400">Hasil OCR:</span> {{ Str::limit($item->hasil_ocr, 80) }}
+                        <span class="text-gray-400">{{ $item->files->count() }} file(s)</span>
                     </div>
                     @endif
                 </div>
 
                 <div class="mt-4 flex items-center justify-end gap-2">
-                    @if ($item->file_spj)
-                    <form action="{{ route('user.analisis.ocr', $item->id) }}" method="POST" class="flex-1">
-                        @csrf
-                        <button type="submit"
-                            class="w-full flex items-center justify-center gap-2 px-4 py-2.5 {{ $item->status_ocr === 'processing' ? 'bg-yellow-50 text-yellow-600 cursor-wait' : 'bg-green-50 hover:bg-green-100 text-green-600' }} rounded-xl font-medium transition-all duration-150"
-                            {{ $item->status_ocr === 'processing' ? 'disabled' : '' }}>
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611l-3.5 1.4c-.32.128-.686.076-.927-.059l-1.89-1.315" />
-                            </svg>
-                            <span>{{ $item->status_ocr === 'processing' ? 'Processing...' : 'OCR' }}</span>
-                        </button>
-                    </form>
-                    @endif
-                    @if ($item->hasil_ocr)
                     <a href="{{ route('user.analisis.show', $item->id) }}"
                         class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded-xl font-medium transition-all duration-150">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        <span>Analisis</span>
+                        <span>Detail</span>
                     </a>
-                    @endif
                     <a href="{{ route('user.analisis.edit', $item->id) }}"
                         class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl font-medium transition-all duration-150">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

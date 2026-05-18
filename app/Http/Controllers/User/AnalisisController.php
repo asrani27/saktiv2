@@ -4,7 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Analisis;
-use App\Services\ChatService;
+use App\Models\AnalisisFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -13,18 +13,18 @@ use Illuminate\Support\Facades\Storage;
 class AnalisisController extends Controller
 {
     /**
-     * Display a listing of analisis SPJ with search functionality.
+     * Display a listing of analisis with search functionality.
      */
     public function index(Request $request)
     {
         $search = $request->get('search', '');
 
-        $analisis = Analisis::when($search, function ($query) use ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('judul', 'like', "%{$search}%")
-                    ->orWhere('hasil_ocr', 'like', "%{$search}%");
-            });
-        })
+        $analisis = Analisis::with('files')
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('judul', 'like', "%{$search}%");
+                });
+            })
             ->where('user_id', auth()->user()->id)
             ->orderBy('created_at', 'desc')
             ->paginate(10)
@@ -45,11 +45,14 @@ class AnalisisController extends Controller
                 ->with('error', 'Anda tidak memiliki akses ke data ini!');
         }
 
+        // Load files
+        $analisi->load('files');
+
         return view('user.analisis.show', compact('analisi'));
     }
 
     /**
-     * Show the form for creating a new analisis SPJ.
+     * Show the form for creating a new analisis.
      */
     public function create()
     {
@@ -57,36 +60,60 @@ class AnalisisController extends Controller
     }
 
     /**
-     * Store a newly created analisis SPJ.
+     * Store a newly created analisis.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'judul' => ['required', 'string', 'max:255'],
-            'file_spj' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
         ]);
 
-        $filePath = null;
-        if ($request->hasFile('file_spj')) {
-            $file = $request->file('file_spj');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('analisis-spj', $fileName, 'public');
-        }
-
-        Analisis::create([
+        // Create analisis
+        $analisis = Analisis::create([
             'user_id' => auth()->user()->id,
             'judul' => $validated['judul'],
-            'file_spj' => $filePath,
             'status_ocr' => 'pending',
         ]);
 
         return redirect()
-            ->route('user.analisis.index')
-            ->with('success', 'Data analisis berhasil ditambahkan!');
+            ->route('user.analisis.show', $analisis->id)
+            ->with('success', 'Data analisis berhasil ditambahkan! Tambahkan file-file SPJ di bawah.');
     }
 
     /**
-     * Show the form for editing the specified analisis SPJ.
+     * Store a new file for analisis.
+     */
+    public function storeFile(Request $request, Analisis $analisi)
+    {
+        // Ensure user can only access their own data
+        if ($analisi->user_id !== auth()->user()->id) {
+            return redirect()
+                ->route('user.analisis.index')
+                ->with('error', 'Anda tidak memiliki akses ke data ini!');
+        }
+
+        $validated = $request->validate([
+            'nama_file' => ['required', 'string', 'max:255'],
+            'file_url' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+        ]);
+
+        $file = $request->file('file_url');
+        $fileName = time() . '_' . $file->getClientOriginalName();
+        $filePath = $file->storeAs('analisis-files', $fileName, 'public');
+
+        AnalisisFile::create([
+            'analisis_id' => $analisi->id,
+            'nama_file' => $validated['nama_file'],
+            'file_url' => $filePath,
+        ]);
+
+        return redirect()
+            ->back()
+            ->with('success', 'File berhasil ditambahkan!');
+    }
+
+    /**
+     * Show the form for editing the specified analisis.
      */
     public function edit(Analisis $analisi)
     {
@@ -97,11 +124,13 @@ class AnalisisController extends Controller
                 ->with('error', 'Anda tidak memiliki akses ke data ini!');
         }
 
+        $analisi->load('files');
+
         return view('user.analisis.edit', compact('analisi'));
     }
 
     /**
-     * Update the specified analisis SPJ.
+     * Update the specified analisis.
      */
     public function update(Request $request, Analisis $analisi)
     {
@@ -114,23 +143,26 @@ class AnalisisController extends Controller
 
         $validated = $request->validate([
             'judul' => ['required', 'string', 'max:255'],
-            'file_spj' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'files.*' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
         ]);
 
-        $analisi->judul = $validated['judul'];
+        $analisi->update([
+            'judul' => $validated['judul'],
+        ]);
 
-        if ($request->hasFile('file_spj')) {
-            // Delete old file if exists
-            if ($analisi->file_spj) {
-                Storage::disk('public')->delete($analisi->file_spj);
+        // Add new files
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $fileName = time() . '_' . $file->getClientOriginalName();
+                $filePath = $file->storeAs('analisis-files', $fileName, 'public');
+
+                AnalisisFile::create([
+                    'analisis_id' => $analisi->id,
+                    'nama_file' => $file->getClientOriginalName(),
+                    'file_url' => $filePath,
+                ]);
             }
-
-            $file = $request->file('file_spj');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $analisi->file_spj = $file->storeAs('analisis-spj', $fileName, 'public');
         }
-
-        $analisi->save();
 
         return redirect()
             ->route('user.analisis.index')
@@ -138,7 +170,7 @@ class AnalisisController extends Controller
     }
 
     /**
-     * Remove the specified analisis SPJ.
+     * Remove the specified analisis.
      */
     public function destroy(Analisis $analisi)
     {
@@ -149,9 +181,9 @@ class AnalisisController extends Controller
                 ->with('error', 'Anda tidak memiliki akses ke data ini!');
         }
 
-        // Delete file if exists
-        if ($analisi->file_spj) {
-            Storage::disk('public')->delete($analisi->file_spj);
+        // Delete all files
+        foreach ($analisi->files as $file) {
+            Storage::disk('public')->delete($file->file_url);
         }
 
         $analisi->delete();
@@ -162,31 +194,40 @@ class AnalisisController extends Controller
     }
 
     /**
-     * Perform OCR on the uploaded file.
+     * Delete a specific file from analisis.
      */
-    public function performOcr(Analisis $analisi)
+    public function destroyFile(AnalisisFile $file)
     {
-        // Ensure user can only access their own data
-        if ($analisi->user_id !== auth()->user()->id) {
+        // Ensure user can only delete their own files
+        if ($file->analisis->user_id !== auth()->user()->id) {
             return redirect()
                 ->route('user.analisis.index')
                 ->with('error', 'Anda tidak memiliki akses ke data ini!');
         }
 
-        // Check if file exists
-        if (!$analisi->file_spj) {
+        Storage::disk('public')->delete($file->file_url);
+        $file->delete();
+
+        return redirect()
+            ->back()
+            ->with('success', 'File berhasil dihapus!');
+    }
+
+    /**
+     * Perform OCR on a specific file.
+     */
+    public function performOcr(AnalisisFile $file)
+    {
+        // Ensure user can only access their own data
+        if ($file->analisis->user_id !== auth()->user()->id) {
             return redirect()
                 ->route('user.analisis.index')
-                ->with('error', 'Tidak ada file untuk diproses!');
+                ->with('error', 'Anda tidak memiliki akses ke data ini!');
         }
-
-        // Update status to processing
-        $analisi->status_ocr = 'processing';
-        $analisi->save();
 
         try {
             // Get the full path to the file
-            $filePath = Storage::disk('public')->path($analisi->file_spj);
+            $filePath = Storage::disk('public')->path($file->file_url);
 
             // Check if file exists
             if (!file_exists($filePath)) {
@@ -199,21 +240,17 @@ class AnalisisController extends Controller
             // Perform OCR based on file type
             $ocrText = $this->extractTextFromFile($filePath, $extension);
 
-            // Update the record with OCR result
-            $analisi->hasil_ocr = $ocrText;
-            $analisi->status_ocr = 'completed';
-            $analisi->save();
+            // Update the file with OCR result
+            $file->update([
+                'hasil_ocr' => $ocrText,
+            ]);
 
             return redirect()
-                ->route('user.analisis.index')
+                ->back()
                 ->with('success', 'OCR berhasil dilakukan!');
         } catch (\Exception $e) {
-            // Update status to failed
-            $analisi->status_ocr = 'failed';
-            $analisi->save();
-
             return redirect()
-                ->route('user.analisis.index')
+                ->back()
                 ->with('error', 'OCR gagal: ' . $e->getMessage());
         }
     }
@@ -302,8 +339,9 @@ class AnalisisController extends Controller
                 ->with('error', 'Anda tidak memiliki akses ke data ini!');
         }
 
-        // Check if OCR result exists
-        if (!$analisi->hasil_ocr) {
+        // Check if any file has OCR result
+        $hasOcrResult = $analisi->files()->whereNotNull('hasil_ocr')->exists();
+        if (!$hasOcrResult) {
             if ($request->ajax()) {
                 return response()->json(['success' => false, 'error' => 'Hasil OCR belum tersedia! Silakan lakukan OCR terlebih dahulu.'], 400);
             }
@@ -322,7 +360,15 @@ class AnalisisController extends Controller
         $analisi->save();
 
         try {
-            $analisisResult = $this->callAIForAnalisis($analisi->hasil_ocr, $validated['prompt']);
+            // Combine all OCR results from files
+            $ocrTexts = $analisi->files()
+                ->whereNotNull('hasil_ocr')
+                ->pluck('hasil_ocr')
+                ->toArray();
+            
+            $combinedOcr = implode("\n\n--- File Berikutnya ---\n\n", $ocrTexts);
+            
+            $analisisResult = $this->callAIForAnalisis($combinedOcr, $validated['prompt']);
 
             // Update the record with AI analysis result
             $analisi->hasil_analisis = $analisisResult;

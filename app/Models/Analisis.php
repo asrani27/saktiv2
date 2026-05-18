@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Analisis extends Model
 {
@@ -20,6 +21,14 @@ class Analisis extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the files for this analisis.
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(AnalisisFile::class);
     }
 
     /**

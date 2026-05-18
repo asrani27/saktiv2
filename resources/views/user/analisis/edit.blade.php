@@ -39,74 +39,68 @@
                 @enderror
             </div>
 
-            {{-- Current File --}}
-            @if ($analisi->file_spj)
+            {{-- Current Files List --}}
+            @if ($analisi->files->count() > 0)
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">File Saat Ini</label>
-                <div class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <svg class="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-800">{{ basename($analisi->file_spj) }}</p>
-                        <a href="{{ Storage::url($analisi->file_spj) }}" target="_blank"
-                            class="text-sm text-blue-600 hover:text-blue-800">Lihat File</a>
+                <label class="block text-sm font-medium text-gray-700 mb-2">File Saat Ini ({{ $analisi->files->count() }} file)</label>
+                <div class="space-y-2">
+                    @foreach ($analisi->files as $file)
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                        <svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">{{ $file->nama_file }}</p>
+                        </div>
+                        <a href="{{ Storage::url($file->file_url) }}" target="_blank"
+                            class="text-sm text-blue-600 hover:text-blue-800">Lihat</a>
+                        <form action="{{ route('user.analisis.file.destroy', $file->id) }}" method="POST" class="inline"
+                            onsubmit="return confirm('Yakin ingin menghapus file ini?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </form>
                     </div>
+                    @endforeach
                 </div>
             </div>
             @endif
 
-            {{-- Upload New File --}}
+            {{-- Add New Files --}}
             <div class="mb-6">
-                <label for="file_spj" class="block text-sm font-medium text-gray-700 mb-2">
-                    {{ $analisi->file_spj ? 'Ganti File SPJ' : 'Upload File SPJ' }}
+                <label for="files" class="block text-sm font-medium text-gray-700 mb-2">
+                    Tambah File Baru
                 </label>
                 <div class="relative">
-                    <input type="file" id="file_spj" name="file_spj" accept=".pdf,.jpg,.jpeg,.png"
-                        class="hidden" onchange="updateFileName(this)">
-                    <label for="file_spj"
-                        class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input type="file" id="files" name="files[]" multiple accept=".pdf,.jpg,.jpeg,.png"
+                        class="hidden" onchange="updateFileNames(this)">
+                    <label for="files"
+                        class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
                         <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                            <svg class="w-10 h-10 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24"
+                            <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            <p class="mb-2 text-sm text-gray-500">
+                            <p class="mb-1 text-sm text-gray-500">
                                 <span class="font-semibold">Klik untuk upload</span> atau drag & drop
                             </p>
-                            <p class="text-xs text-gray-400">PDF, JPG, JPEG, PNG (Maksimal 10MB)</p>
-                            <p id="file-name" class="mt-2 text-sm text-blue-600 font-medium hidden"></p>
+                            <p class="text-xs text-gray-400">PDF, JPG, JPEG, PNG (Maksimal 10MB per file)</p>
+                            <p id="file-count" class="mt-2 text-sm text-blue-600 font-medium hidden"></p>
                         </div>
                     </label>
                 </div>
-                @error('file_spj')
+                @error('files.*')
                 <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                 @enderror
-                <p class="mt-2 text-xs text-gray-500">Kosongkan jika tidak ingin更换文件</p>
-            </div>
-
-            {{-- Status Info --}}
-            <div class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl">
-                <div class="flex items-start gap-3">
-                    <svg class="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div class="text-sm text-gray-600">
-                        <p class="font-medium">Informasi Status:</p>
-                        <div class="mt-2 flex items-center gap-2">
-                            <span
-                                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $analisi->status_badge['bg'] }} {{ $analisi->status_badge['text'] }}">
-                                {{ $analisi->status_badge['label'] }}
-                            </span>
-                            <span class="text-xs text-gray-400">Status OCR saat ini</span>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {{-- Action Buttons --}}
@@ -131,13 +125,13 @@
 
 @push('scripts')
 <script>
-    function updateFileName(input) {
-        const fileName = document.getElementById('file-name');
-        if (input.files && input.files[0]) {
-            fileName.textContent = 'File terpilih: ' + input.files[0].name;
-            fileName.classList.remove('hidden');
+    function updateFileNames(input) {
+        const fileCount = document.getElementById('file-count');
+        if (input.files && input.files.length > 0) {
+            fileCount.textContent = input.files.length + ' file(s) terpilih';
+            fileCount.classList.remove('hidden');
         } else {
-            fileName.classList.add('hidden');
+            fileCount.classList.add('hidden');
         }
     }
 </script>

@@ -48,8 +48,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/{analisi}/edit', [AnalisisController::class, 'edit'])->name('edit');
         Route::put('/{analisi}', [AnalisisController::class, 'update'])->name('update');
         Route::delete('/{analisi}', [AnalisisController::class, 'destroy'])->name('destroy');
-        Route::post('/{analisi}/ocr', [AnalisisController::class, 'performOcr'])->name('ocr');
         Route::post('/{analisi}/analisis', [AnalisisController::class, 'performAnalisis'])->name('analisis');
+        
+        // File-specific routes
+        Route::post('/{analisi}/file', [AnalisisController::class, 'storeFile'])->name('file.store');
+        Route::post('/file/{file}/ocr', [AnalisisController::class, 'performOcr'])->name('ocr.file');
+        Route::delete('/file/{file}', [AnalisisController::class, 'destroyFile'])->name('file.destroy');
     });
 
     // Admin Routes

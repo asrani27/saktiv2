@@ -21,7 +21,7 @@
                 </svg>
             </div>
             <div>
-                <h1 class="text-lg sm:text-xl font-bold text-white">Saktiv</h1>
+                <h1 class="text-lg sm:text-xl font-bold text-white">SISAKTI</h1>
                 <p class="text-xs text-blue-200">Admin Panel</p>
             </div>
         </div>
@@ -29,14 +29,14 @@
 
     <!-- Navigation - Conditionally load menu based on user role -->
     @if(auth()->user()->role === 'admin')
-        @include('layouts.partials.menu_admin')
+    @include('layouts.partials.menu_admin')
     @else
-        @include('layouts.partials.menu_user')
+    @include('layouts.partials.menu_user')
     @endif
 
     <!-- Footer -->
     <div
         class="absolute bottom-0 left-0 right-0 px-4 py-4 border-t border-white/10 bg-gradient-to-t from-blue-800/50 to-transparent">
-        <p class="text-xs text-blue-200 text-center">Saktiv v1.0.0</p>
+        <p class="text-xs text-blue-200 text-center">sisakti v3.1.0</p>
     </div>
 </aside>
